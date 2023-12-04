@@ -44,7 +44,6 @@ func NewPredictor(modeldir string) (Predictor, error) {
 		return Predictor{}, err
 	}
 	predictor.Model = model
-	fmt.Println("Mode loaded")
 	return predictor, err
 }
 
