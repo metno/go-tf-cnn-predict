@@ -10,8 +10,8 @@ import (
 	"github.com/wamuir/graft/tensorflow/op"
 )
 
-const ImageWidth = 128
-const ImageHeight = 128
+var ImageWidth int32 = 128
+var ImageHeight int32 = 128
 
 func init() {
 	os.Setenv("TF_CPP_MIN_LOG_LEVEL", "1")
@@ -153,7 +153,6 @@ func constructGraphToNormalizeImage() (graph *tf.Graph, input, output tf.Output,
 	// - The colors, represented as R, G, B in 1-byte each were converted to
 	//   float using (value - Mean)/Scale.
 	const (
-		H, W  = ImageWidth, ImageHeight
 		Mean  = float32(1.0)
 		Scale = float32(255)
 	)
@@ -173,7 +172,7 @@ func constructGraphToNormalizeImage() (graph *tf.Graph, input, output tf.Output,
 				op.ExpandDims(s,
 					op.Cast(s, decode, tf.Float),
 					op.Const(s.SubScope("make_batch"), int32(0))),
-				op.Const(s.SubScope("size"), []int32{H, W})),
+				op.Const(s.SubScope("size"), []int32{ImageHeight, ImageWidth})),
 			op.Const(s.SubScope("mean"), Mean)),
 		op.Const(s.SubScope("scale"), Scale))
 	graph, err = s.Finalize()
