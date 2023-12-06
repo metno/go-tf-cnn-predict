@@ -4,31 +4,6 @@ import (
 	"math"
 )
 
-func argmax(arr []float32) int {
-	var big float32 = -1.0
-	var idx int = -1
-
-	for i := 0; i < len(arr); i++ {
-		if arr[i] >= big {
-			big = arr[i]
-			idx = i
-		}
-	}
-	return idx
-}
-func argmin(arr []float32) int {
-	var small float32 = 1.0
-	var idx int = -1
-
-	for i := 0; i < len(arr); i++ {
-		if arr[i] <= small {
-			small = arr[i]
-			idx = i
-		}
-	}
-	return idx
-}
-
 func CalcDeviation(x []float32) float32 {
 	//fmt.Printf("x: %v\n", x)
 	i := make([]float32, len(x))
