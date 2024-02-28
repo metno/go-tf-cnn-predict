@@ -65,9 +65,17 @@ func (p Predictor) PredictWithDeviation(imagefile string, model *tf.SavedModel) 
 		return -1, -1, err
 	}
 	deviation = stddev.CalcDeviation(float32arr)
+	if len(float32arr) == 1 { // Binary classification
+		if float32arr[0] <= 0.5 {
+			classpred = 0
+		} else {
+			classpred = 1
+		}
+		deviation = float32arr[0]
+	} else { // multclass classification . (Or multilabel, handle eventually)
+		classpred = argmax(float32arr)
+	}
 
-	classpred = argmax(float32arr)
-	//fmt.Printf("dev: %0.3f, %+v", deviation, float32arr)
 	return classpred, deviation, err
 
 }
@@ -84,8 +92,6 @@ func (p Predictor) PredictionsArr(imagefile string, model *tf.SavedModel) ([]flo
 	result, runErr := model.Session.Run(
 		map[tf.Output]*tf.Tensor{
 			model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
-
-			//model.Graph.Operation("keep_prob").Output(0): keepProb,
 		},
 		[]tf.Output{
 			model.Graph.Operation("StatefulPartitionedCall").Output(0),
@@ -97,9 +103,9 @@ func (p Predictor) PredictionsArr(imagefile string, model *tf.SavedModel) ([]flo
 		return []float32{}, runErr
 
 	}
+	//fmt.Printf("RESULT: %+v\n", result[0].Value())
 	arr32 := result[0].Value().([][]float32)[0]
 
-	argmax(arr32)
 	//fmt.Printf("Result: %v\n", result[0].Value().([][]float32))
 	return arr32, nil
 }
