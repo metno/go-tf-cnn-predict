@@ -48,8 +48,8 @@ func NewPredictor(modeldir string) (Predictor, error) {
 }
 
 // Predict - Return index with highest probability
-func (p Predictor) Predict(imagefile string, model *tf.SavedModel) (int, error) {
-	float32arr, err := p.PredictionsArr(imagefile, model)
+func (p Predictor) Predict(imagefile string) (int, error) {
+	float32arr, err := p.PredictionsArr(imagefile)
 	if err != nil {
 		return -1, err
 	}
@@ -59,8 +59,8 @@ func (p Predictor) Predict(imagefile string, model *tf.SavedModel) (int, error) 
 }
 
 // Predict - return class prediction and standard deviation
-func (p Predictor) PredictWithDeviation(imagefile string, model *tf.SavedModel) (classpred int, deviation float32, err error) {
-	float32arr, err := p.PredictionsArr(imagefile, model)
+func (p Predictor) PredictWithDeviation(imagefile string) (classpred int, deviation float32, err error) {
+	float32arr, err := p.PredictionsArr(imagefile)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -81,7 +81,7 @@ func (p Predictor) PredictWithDeviation(imagefile string, model *tf.SavedModel) 
 }
 
 // PredictionsArr Return array of probabilities
-func (p Predictor) PredictionsArr(imagefile string, model *tf.SavedModel) ([]float32, error) {
+func (p Predictor) PredictionsArr(imagefile string) ([]float32, error) {
 
 	tensor, err := makeTensorFromImage(imagefile)
 	if err != nil {
@@ -89,12 +89,12 @@ func (p Predictor) PredictionsArr(imagefile string, model *tf.SavedModel) ([]flo
 
 	}
 
-	result, runErr := model.Session.Run(
+	result, runErr := p.Model.Session.Run(
 		map[tf.Output]*tf.Tensor{
-			model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
+			p.Model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
 		},
 		[]tf.Output{
-			model.Graph.Operation("StatefulPartitionedCall").Output(0),
+			p.Model.Graph.Operation("StatefulPartitionedCall").Output(0),
 		},
 		nil,
 	)
