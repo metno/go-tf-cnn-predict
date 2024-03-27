@@ -21,7 +21,7 @@ func TestPredict(t *testing.T) {
 
 	model := predictor.Model
 	defer model.Session.Close()
-	cc, err := predictor.Predict("test_fixtures/images/16_20180430T0500Z.jpg", model)
+	cc, err := predictor.Predict("test_fixtures/images/16_20180430T0500Z.jpg")
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		t.Fail()
@@ -29,7 +29,7 @@ func TestPredict(t *testing.T) {
 	assertEqual(t, 0, cc) // This zero does not come from the labels, but from what a python implementation we know predict works.
 	fmt.Printf("CC: %d\n", cc)
 
-	cc, err = predictor.Predict("test_fixtures/images/176_20190516T1700Z.jpg", model)
+	cc, err = predictor.Predict("test_fixtures/images/176_20190516T1700Z.jpg")
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		t.Fail()
@@ -37,7 +37,7 @@ func TestPredict(t *testing.T) {
 	assertEqual(t, 7, cc) // This 7 does not come from the labels, but from what a python implementation we know predict works .
 	fmt.Printf("CC: %d\n", cc)
 
-	cc, err = predictor.Predict("test_fixtures/images/114_20180922T0900Z.jpg", model)
+	cc, err = predictor.Predict("test_fixtures/images/114_20180922T0900Z.jpg")
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		t.Fail()
