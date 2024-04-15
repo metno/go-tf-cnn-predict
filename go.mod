@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/stretchr/testify v1.8.4
-	//github.com/wamuir/graft v0.6.0
 	github.com/wamuir/graft v0.7.0
 )
 
