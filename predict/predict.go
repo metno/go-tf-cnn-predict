@@ -110,12 +110,96 @@ func (p Predictor) PredictionsArr(imagefile string) ([]float32, error) {
 	return arr32, nil
 }
 
+// Predict - return class prediction and standard deviation
+func (p Predictor) PredictWithDeviationFromByteBufr(bytes []byte) (classpred int, deviation float32, err error) {
+	float32arr, err := p.PredictionsArrFromByteBufr(bytes)
+	if err != nil {
+		return -1, -1, err
+	}
+	deviation = stddev.CalcDeviation(float32arr)
+	if len(float32arr) == 1 { // Binary classification
+		if float32arr[0] <= 0.5 {
+			classpred = 0
+		} else {
+			classpred = 1
+		}
+		deviation = float32arr[0]
+	} else { // multclass classification . (Or multilabel, handle eventually)
+		classpred = argmax(float32arr)
+	}
+
+	return classpred, deviation, err
+
+}
+
+// PredictionsArr Return array of probabilities
+func (p Predictor) PredictionsArrFromByteBufr(bytes []byte) ([]float32, error) {
+
+	tensor, err := makeTensorFromByteBufr(bytes)
+	if err != nil {
+		return []float32{}, err
+
+	}
+
+	result, runErr := p.Model.Session.Run(
+		map[tf.Output]*tf.Tensor{
+			p.Model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
+		},
+		[]tf.Output{
+			p.Model.Graph.Operation("StatefulPartitionedCall").Output(0),
+		},
+		nil,
+	)
+
+	if runErr != nil {
+		return []float32{}, runErr
+
+	}
+	//fmt.Printf("RESULT: %+v\n", result[0].Value())
+	arr32 := result[0].Value().([][]float32)[0]
+
+	//fmt.Printf("Result: %v\n", result[0].Value().([][]float32))
+	return arr32, nil
+}
+
 // Convert the image in filename to a Tensor suitable as input to the cc-classifier model.
 func makeTensorFromImage(filename string) (*tf.Tensor, error) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
+	// DecodeJpeg uses a scalar String-valued tensor as input.
+	tensor, err := tf.NewTensor(string(bytes))
+	if err != nil {
+		return nil, err
+	}
+	// Construct a graph to normalize the image
+	graph, input, output, err := constructGraphToNormalizeImage()
+	if err != nil {
+		return nil, err
+	}
+
+	// Execute that graph to normalize this one image
+	session, err := tf.NewSession(graph, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	normalized, err := session.Run(
+		map[tf.Output]*tf.Tensor{input: tensor},
+		[]tf.Output{output},
+		nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return normalized[0], nil
+}
+
+// Convert the image in filename to a Tensor suitable as input to the cc-classifier model.
+func makeTensorFromByteBufr(bytes []byte) (*tf.Tensor, error) {
+
 	// DecodeJpeg uses a scalar String-valued tensor as input.
 	tensor, err := tf.NewTensor(string(bytes))
 	if err != nil {
