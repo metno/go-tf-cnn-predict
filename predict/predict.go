@@ -10,8 +10,8 @@ import (
 	"github.com/wamuir/graft/tensorflow/op"
 )
 
-var ImageWidth int32 = 128
-var ImageHeight int32 = 128
+var ImageWidth int32 = 224
+var ImageHeight int32 = 224
 
 func init() {
 	os.Setenv("TF_CPP_MIN_LOG_LEVEL", "1")
@@ -91,7 +91,7 @@ func (p Predictor) PredictionsArr(imagefile string) ([]float32, error) {
 
 	result, runErr := p.Model.Session.Run(
 		map[tf.Output]*tf.Tensor{
-			p.Model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
+			p.Model.Graph.Operation("serving_default_vgg16_input").Output(0): tensor,
 		},
 		[]tf.Output{
 			p.Model.Graph.Operation("StatefulPartitionedCall").Output(0),
@@ -142,7 +142,8 @@ func (p Predictor) PredictionsArrFromByteBufr(bytes []byte) ([]float32, error) {
 
 	result, runErr := p.Model.Session.Run(
 		map[tf.Output]*tf.Tensor{
-			p.Model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
+			//p.Model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
+			p.Model.Graph.Operation("serving_default_vgg16_input").Output(0): tensor,
 		},
 		[]tf.Output{
 			p.Model.Graph.Operation("StatefulPartitionedCall").Output(0),
