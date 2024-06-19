@@ -10,9 +10,6 @@ import (
 	"github.com/wamuir/graft/tensorflow/op"
 )
 
-var ImageWidth int32 = 128
-var ImageHeight int32 = 128
-
 func init() {
 	os.Setenv("TF_CPP_MIN_LOG_LEVEL", "1")
 	os.Setenv("KMP_AFFINITY", "noverbose")
@@ -32,11 +29,13 @@ func argmax(arr []float32) int {
 }
 
 type Predictor struct {
-	Model *tf.SavedModel
+	Model     *tf.SavedModel
+	InputName string
+	ImgSize   int32
 }
 
 // declare method
-func NewPredictor(modeldir string) (Predictor, error) {
+func NewPredictor(modeldir string, inputName string, imgSize int32) (Predictor, error) {
 	predictor := Predictor{}
 	model, err := tf.LoadSavedModel(modeldir, []string{"serve"}, nil)
 	if err != nil {
@@ -44,6 +43,8 @@ func NewPredictor(modeldir string) (Predictor, error) {
 		return Predictor{}, err
 	}
 	predictor.Model = model
+	predictor.InputName = inputName
+	predictor.ImgSize = imgSize
 	return predictor, err
 }
 
@@ -83,7 +84,9 @@ func (p Predictor) PredictWithDeviation(imagefile string) (classpred int, deviat
 // PredictionsArr Return array of probabilities
 func (p Predictor) PredictionsArr(imagefile string) ([]float32, error) {
 
-	tensor, err := makeTensorFromImage(imagefile)
+	//inputs := strings.Split(p.Model.Signatures["serving_default"].Inputs["densenet201_input"].Name, ":")
+	//fmt.Printf("N: %+v\n", inputs[0])
+	tensor, err := p.makeTensorFromImage(imagefile)
 	if err != nil {
 		return []float32{}, err
 
@@ -91,7 +94,7 @@ func (p Predictor) PredictionsArr(imagefile string) ([]float32, error) {
 
 	result, runErr := p.Model.Session.Run(
 		map[tf.Output]*tf.Tensor{
-			p.Model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
+			p.Model.Graph.Operation(p.InputName).Output(0): tensor,
 		},
 		[]tf.Output{
 			p.Model.Graph.Operation("StatefulPartitionedCall").Output(0),
@@ -134,7 +137,7 @@ func (p Predictor) PredictWithDeviationFromByteBufr(bytes []byte) (classpred int
 // PredictionsArr Return array of probabilities
 func (p Predictor) PredictionsArrFromByteBufr(bytes []byte) ([]float32, error) {
 
-	tensor, err := makeTensorFromByteBufr(bytes)
+	tensor, err := p.makeTensorFromByteBufr(bytes)
 	if err != nil {
 		return []float32{}, err
 
@@ -142,7 +145,7 @@ func (p Predictor) PredictionsArrFromByteBufr(bytes []byte) ([]float32, error) {
 
 	result, runErr := p.Model.Session.Run(
 		map[tf.Output]*tf.Tensor{
-			p.Model.Graph.Operation("serving_default_conv2d_input").Output(0): tensor,
+			p.Model.Graph.Operation(p.InputName).Output(0): tensor,
 		},
 		[]tf.Output{
 			p.Model.Graph.Operation("StatefulPartitionedCall").Output(0),
@@ -162,16 +165,16 @@ func (p Predictor) PredictionsArrFromByteBufr(bytes []byte) ([]float32, error) {
 }
 
 // Convert the image in filename to a Tensor suitable as input to the cc-classifier model.
-func makeTensorFromImage(filename string) (*tf.Tensor, error) {
+func (p Predictor) makeTensorFromImage(filename string) (*tf.Tensor, error) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	return makeTensorFromByteBufr(bytes)
+	return p.makeTensorFromByteBufr(bytes)
 }
 
 // Convert the image in filename to a Tensor suitable as input to the cc-classifier model.
-func makeTensorFromByteBufr(bytes []byte) (*tf.Tensor, error) {
+func (p Predictor) makeTensorFromByteBufr(bytes []byte) (*tf.Tensor, error) {
 
 	// DecodeJpeg uses a scalar String-valued tensor as input.
 	tensor, err := tf.NewTensor(string(bytes))
@@ -179,7 +182,7 @@ func makeTensorFromByteBufr(bytes []byte) (*tf.Tensor, error) {
 		return nil, err
 	}
 	// Construct a graph to normalize the image
-	graph, input, output, err := constructGraphToNormalizeImage()
+	graph, input, output, err := p.constructGraphToNormalizeImage()
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +213,7 @@ func makeTensorFromByteBufr(bytes []byte) (*tf.Tensor, error) {
 // This function constructs a graph of TensorFlow operations which takes as
 // input a JPEG-encoded string and returns a tensor suitable as input to the
 // inception model.
-func constructGraphToNormalizeImage() (graph *tf.Graph, input, output tf.Output, err error) {
+func (p Predictor) constructGraphToNormalizeImage() (graph *tf.Graph, input, output tf.Output, err error) {
 
 	// - The model was trained after with images scaled to 128x128 pixels.
 	// - The colors, represented as R, G, B in 1-byte each were converted to
@@ -235,7 +238,7 @@ func constructGraphToNormalizeImage() (graph *tf.Graph, input, output tf.Output,
 				op.ExpandDims(s,
 					op.Cast(s, decode, tf.Float),
 					op.Const(s.SubScope("make_batch"), int32(0))),
-				op.Const(s.SubScope("size"), []int32{ImageHeight, ImageWidth})),
+				op.Const(s.SubScope("size"), []int32{p.ImgSize, p.ImgSize})),
 			op.Const(s.SubScope("mean"), Mean)),
 		op.Const(s.SubScope("scale"), Scale))
 	graph, err = s.Finalize()
