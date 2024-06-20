@@ -13,7 +13,7 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 }
 
 func TestPredict(t *testing.T) {
-	predictor, err := NewPredictor("test_fixtures/model/saved_model_145.pb")
+	predictor, err := NewPredictor("test_fixtures/model/saved_model_145.pb", "serving_default_conv2d_input", 128)
 	if err != nil {
 		log.Printf("NewPredictor: %v", err)
 		t.Fail()
