@@ -5,22 +5,25 @@ import (
 )
 
 func CalcDeviation(x []float32) float32 {
-	//fmt.Printf("x: %v\n", x)
-	i := make([]float32, len(x))
+
+	variance := math.Sqrt(math.Abs(CalcVariance(x)))
+
+	return float32(variance)
+}
+
+func CalcVariance(arr []float32) float64 {
 	var mean float32 = 0
-	for j := 0; j < len(x); j++ {
-		i[j] = float32(j) / float32((len(x) - 1.0))
+	for _, value := range arr {
+		mean += value
 	}
-	var variance float32 = 0.0
-	//fmt.Printf("i: %v\n", i)
-	for j := 0; j < len(x); j++ {
-		mean += x[j] * i[j]
-		variance = variance + (x[j] * i[j] * i[j])
+	mean /= float32(len(arr))
+
+	var variance float32 = 0
+	for _, value := range arr {
+		difference := value - mean
+		variance += difference * difference
 	}
-	variance -= (mean * mean)
+	variance /= float32(len(arr))
 
-	// Take math.Abs, sqrt(-0) = Nan ..
-	variance = float32((len(x) - 1.0)) * float32(math.Sqrt(math.Abs(float64(variance))))
-
-	return variance
+	return float64(variance)
 }
