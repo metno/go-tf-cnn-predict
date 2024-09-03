@@ -60,11 +60,35 @@ func (p Predictor) Predict(imagefile string) (int, error) {
 }
 
 // Predict - return class prediction and standard deviation
-func (p Predictor) PredictWithDeviation(imagefile string) (classpred int, deviation float32, err error) {
+func (p Predictor) PredictWithVariance(imagefile string) (classpred int, deviation float64, err error) {
 	float32arr, err := p.PredictionsArr(imagefile)
 	if err != nil {
 		return -1, -1, err
 	}
+	//fmt.Printf("%+v\n", float32arr)
+	deviation = stddev.CalcVariance(float32arr)
+	if len(float32arr) == 1 { // Binary classification
+		if float32arr[0] <= 0.5 {
+			classpred = 0
+		} else {
+			classpred = 1
+		}
+		deviation = float64(float32arr[0])
+	} else { // multclass classification . (Or multilabel, handle eventually)
+		classpred = argmax(float32arr)
+	}
+
+	return classpred, deviation, err
+
+}
+
+// Predict - return class prediction and standard deviation
+func (p Predictor) PredictWithDeviation(imagefile string) (classpred int, deviation float64, err error) {
+	float32arr, err := p.PredictionsArr(imagefile)
+	if err != nil {
+		return -1, -1, err
+	}
+	//fmt.Printf("%+v\n", float32arr)
 	deviation = stddev.CalcDeviation(float32arr)
 	if len(float32arr) == 1 { // Binary classification
 		if float32arr[0] <= 0.5 {
@@ -72,7 +96,7 @@ func (p Predictor) PredictWithDeviation(imagefile string) (classpred int, deviat
 		} else {
 			classpred = 1
 		}
-		deviation = float32arr[0]
+		deviation = float64(float32arr[0])
 	} else { // multclass classification . (Or multilabel, handle eventually)
 		classpred = argmax(float32arr)
 	}
@@ -113,7 +137,7 @@ func (p Predictor) PredictionsArr(imagefile string) ([]float32, error) {
 }
 
 // Predict - return class prediction and standard deviation
-func (p Predictor) PredictWithDeviationFromByteBufr(bytes []byte) (classpred int, deviation float32, err error) {
+func (p Predictor) PredictWithDeviationFromByteBufr(bytes []byte) (classpred int, deviation float64, err error) {
 	float32arr, err := p.PredictionsArrFromByteBufr(bytes)
 	if err != nil {
 		return -1, -1, err
@@ -125,7 +149,7 @@ func (p Predictor) PredictWithDeviationFromByteBufr(bytes []byte) (classpred int
 		} else {
 			classpred = 1
 		}
-		deviation = float32arr[0]
+		deviation = float64(float32arr[0])
 	} else { // multclass classification . (Or multilabel, handle eventually)
 		classpred = argmax(float32arr)
 	}
